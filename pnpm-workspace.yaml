@@ -1,5 +1,5 @@
 packages:
-  - 'packages/*'
-  - 'playground/**'
-  - 'packages/**/__tests__/**'
+  - 'packages/*' #资源包
+  - 'playground/**' # 示例各种配置
+  - 'packages/**/__tests__/**' # 测试
   - docs

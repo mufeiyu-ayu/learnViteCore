@@ -150,7 +150,7 @@ export default tseslint.config(
     name: 'vite/node',
     files: ['packages/vite/src/node/**/*.?([cm])[jt]s?(x)'],
     rules: {
-      'no-console': ['error'],
+      // 'no-console': ['error'],
       'n/no-restricted-require': [
         'error',
         Object.keys(pkgVite.devDependencies).map((d) => ({

@@ -32,6 +32,7 @@ interface GlobalCLIOptions {
 }
 
 let profileSession = global.__vite_profile_session
+
 let profileCount = 0
 
 export const stopProfiler = (
@@ -68,7 +69,7 @@ const filterDuplicateOptions = <T extends object>(options: T) => {
   }
 }
 /**
- * removing global flags before passing as command specific sub-configs
+ *
  */
 function cleanOptions<Options extends GlobalCLIOptions>(
   options: Options,
@@ -149,6 +150,7 @@ cli
   )
   .action(async (root: string, options: ServerOptions & GlobalCLIOptions) => {
     filterDuplicateOptions(options)
+    console.log(options, 'options')
     // output structure is preserved even after bundling so require()
     // is ok here
     const { createServer } = await import('./server')
