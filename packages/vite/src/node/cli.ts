@@ -152,6 +152,7 @@ cli
     filterDuplicateOptions(options)
     // output structure is preserved even after bundling so require()
     // is ok here
+
     const { createServer } = await import('./server')
     try {
       const server = await createServer({

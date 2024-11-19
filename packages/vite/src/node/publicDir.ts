@@ -13,7 +13,6 @@ const publicFilesMap = new WeakMap<ResolvedConfig, Set<string>>()
 export async function initPublicFiles(
   config: ResolvedConfig,
 ): Promise<Set<string> | undefined> {
-  console.log(config.publicDir, 'config.publicDir')
   let fileNames: string[]
   try {
     fileNames = await recursiveReaddir(config.publicDir)

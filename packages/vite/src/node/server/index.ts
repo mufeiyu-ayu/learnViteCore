@@ -439,9 +439,9 @@ export async function _createServer(
 
   // 根路径 ，服务器
   const { root, server: serverConfig } = config
-  console.log('serverConfig', serverConfig, '=>index.ts:442')
+
   const httpsOptions = await resolveHttpsConfig(config.server.https)
-  console.log('config.server.https', config.server.https, '=>index.ts:444')
+
   const { middlewareMode } = serverConfig
 
   const resolvedOutDirs = getResolvedOutDirs(
@@ -449,11 +449,14 @@ export async function _createServer(
     config.build.outDir,
     config.build.rollupOptions?.output,
   )
+
   const emptyOutDir = resolveEmptyOutDir(
     config.build.emptyOutDir,
     config.root,
     resolvedOutDirs,
   )
+
+  //当文件发生修改、添加或删除时，Vite 会捕捉这些变化并触发相应的处理逻辑（如重新编译模块、刷新浏览器）
   const resolvedWatchOptions = resolveChokidarOptions(
     config,
     {
