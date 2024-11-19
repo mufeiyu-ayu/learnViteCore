@@ -478,7 +478,7 @@ importers:
   playground/aa:
     dependencies:
       vite:
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../packages/vite
 
   playground/alias:

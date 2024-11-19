@@ -150,7 +150,6 @@ cli
   )
   .action(async (root: string, options: ServerOptions & GlobalCLIOptions) => {
     filterDuplicateOptions(options)
-    console.log(options, 'options')
     // output structure is preserved even after bundling so require()
     // is ok here
     const { createServer } = await import('./server')

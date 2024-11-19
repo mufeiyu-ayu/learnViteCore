@@ -473,6 +473,7 @@ export async function resolveConfig(
 
   let { configFile } = config
   if (configFile !== false) {
+    // 如果 configfile没值
     const loadResult = await loadConfigFromFile(
       configEnv,
       configFile,

@@ -432,12 +432,16 @@ export async function _createServer(
   inlineConfig: InlineConfig = {},
   options: { hotListen: boolean },
 ): Promise<ViteDevServer> {
+  // 处理配置文件
   const config = await resolveConfig(inlineConfig, 'serve')
 
   const initPublicFilesPromise = initPublicFiles(config)
 
+  // 根路径 ，服务器
   const { root, server: serverConfig } = config
+  console.log('serverConfig', serverConfig, '=>index.ts:442')
   const httpsOptions = await resolveHttpsConfig(config.server.https)
+  console.log('config.server.https', config.server.https, '=>index.ts:444')
   const { middlewareMode } = serverConfig
 
   const resolvedOutDirs = getResolvedOutDirs(

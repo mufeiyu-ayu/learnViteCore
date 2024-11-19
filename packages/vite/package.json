@@ -72,7 +72,7 @@
   "funding": "https://github.com/vitejs/vite?sponsor=1",
   "scripts": {
     "vite": "vite",
-    "dev": "tsx watch src/node/cli.ts",
+    "dev": "tsx watch ./bin/vite.ts",
     "build-watch": "rimraf dist && run-p \"build-bundle --watch\" \"build-types --watch\"",
     "build-bundle": "rollup --config rollup.config.ts --configPlugin esbuild",
     "build-types": "tsc --watch --emitDeclarationOnly --outDir dist/types -p src/node",

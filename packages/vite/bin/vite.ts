@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
 function start() {
-  return import('../dist/node/cli.js')
+  return import('../src/node/cli')
 }
 start()
