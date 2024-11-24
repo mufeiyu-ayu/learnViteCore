@@ -532,8 +532,9 @@ export async function _createServer(
     container.resolveId(url, undefined, { ssr }),
   )
 
-  // 创建插件容器，管理所有 Vite 插件,负责协调插件的执行顺序和生命周期
+  // 创建插件容器，管理所有 Vite 插件,负责协调插件的执行顺序和生命周期，
   const container = await createPluginContainer(config, moduleGraph, watcher)
+
   // 关闭 http 服务器的函数
   const closeHttpServer = createServerCloseFn(httpServer)
 
@@ -827,13 +828,13 @@ export async function _createServer(
     await onHMRUpdate(isUnlink ? 'delete' : 'create', file)
   }
 
+  // 监听文件变化
   watcher.on('change', async (file) => {
-    file = normalizePath(file)
-    console.log(file, 33)
+    file = normalizePath(file) //规范化路径
     await container.watchChange(file, { event: 'update' })
     // invalidate module graph cache on file change
     moduleGraph.onFileChange(file)
-    await onHMRUpdate('update', file)
+    await onHMRUpdate('update', file) // 处理热更新
   })
 
   getFsUtils(config).initWatcher?.(watcher)

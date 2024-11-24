@@ -130,11 +130,19 @@ export async function createPluginContainer(
   return container
 }
 
+/**
+ * PluginContainer 的构造函数完成了插件管理、上下文初始化和钩子工具生成，为后续的插件钩子执行（如 resolveId、load、transform）奠定了基础。构造函数的设计确保了插件执行的顺序性、并行性和上下文一致性，是 Vite 插件系统的核心部分。
+ */
 class PluginContainer {
+  //普通插件的上下文。
   private _pluginContextMap = new Map<Plugin, PluginContext>()
+  // SSR 模式插件的上下文。
   private _pluginContextMapSsr = new Map<Plugin, PluginContext>()
+  // 存储解析后的 Rollup 配置，用于兼容 Rollup 插件。
   private _resolvedRollupOptions?: InputOptions
+  //用于跟踪异步插件钩子的执行，确保在关闭服务时等待所有钩子完成。
   private _processesing = new Set<Promise<any>>()
+  //防止重复解析同一模块，优化性能。
   private _seenResolves: Record<string, true | undefined> = {}
   private _closed = false
   // _addedFiles from the `load()` hook gets saved here so it can be reused in the `transform()` hook
@@ -146,6 +154,7 @@ class PluginContainer {
   getSortedPluginHooks: PluginHookUtils['getSortedPluginHooks']
   getSortedPlugins: PluginHookUtils['getSortedPlugins']
 
+  // 存储由插件监视的文件路径。
   watchFiles = new Set<string>()
   minimalContext: MinimalPluginContext
 
@@ -158,10 +167,11 @@ class PluginContainer {
     public watcher?: FSWatcher,
     public plugins = config.plugins,
   ) {
+    //初始化最小上下文，提供基本信息和工具
     this.minimalContext = {
       meta: {
-        rollupVersion,
-        watchMode: true,
+        rollupVersion, //Rollup 版本号
+        watchMode: true, //watch 模式
       },
       debug: noop,
       info: noop,
@@ -169,11 +179,15 @@ class PluginContainer {
       // @ts-expect-error noop
       error: noop,
     }
+    // 根据插件列表（plugins）生成用于管理插件钩子的工具函数。
     const utils = createPluginHookUtils(plugins)
+
+    // 根据插件钩子名称（如 load、transform）获取按优先级排序的插件列表。
     this.getSortedPlugins = utils.getSortedPlugins
+    // 获取某个钩子中按优先级排序的插件钩子函数列表。
     this.getSortedPluginHooks = utils.getSortedPluginHooks
   }
-
+  //更新模块加载添加的导入
   private _updateModuleLoadAddedImports(
     id: string,
     addedImports: Set<string> | null,
@@ -236,7 +250,9 @@ class PluginContainer {
 
   async resolveRollupOptions(): Promise<InputOptions> {
     if (!this._resolvedRollupOptions) {
+      // 获取用户在配置中指定的初始 Rollup 配置
       let options = this.config.build.rollupOptions
+
       for (const optionsHook of this.getSortedPluginHooks('options')) {
         if (this._closed) {
           throwClosedServerError()
@@ -246,8 +262,10 @@ class PluginContainer {
             optionsHook.call(this.minimalContext, options),
           )) || options
       }
-      this._resolvedRollupOptions = options
+      // 如果没有传入初始 Rollup 配置，则使用默认配置
+      this._resolvedRollupOptions = options // {}
     }
+
     return this._resolvedRollupOptions
   }
 
@@ -278,9 +296,19 @@ class PluginContainer {
         parallelPromises.length = 0
         await handler.apply(context(plugin), args(plugin))
       } else {
+        // plugin
+        /** context(plugin)._plugin.name
+         * vite:watch-package-data
+         * alias
+         * vite:css
+         * vite:worker
+         * vite:asset
+         * vite:client-inject
+         */
         parallelPromises.push(handler.apply(context(plugin), args(plugin)))
       }
     }
+    console.log(parallelPromises, 'parallelPromises')
     await Promise.all(parallelPromises)
   }
 

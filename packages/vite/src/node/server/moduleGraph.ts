@@ -93,21 +93,25 @@ export type ResolvedUrl = [
 ]
 
 export class ModuleGraph {
+  // 存储url到模块的映射
   urlToModuleMap = new Map<string, ModuleNode>()
+  // 存储文件到模块的映射
   idToModuleMap = new Map<string, ModuleNode>()
+  // 存储id到模块的映射
   etagToModuleMap = new Map<string, ModuleNode>()
-  // a single file may corresponds to multiple modules with different queries
+  // 单个文件可能对应于具有不同查询的多个模块
+  // 存储文件到模块的映射
   fileToModulesMap = new Map<string, Set<ModuleNode>>()
   safeModulesPath = new Set<string>()
 
-  /**
+  /**  未解析的url到模块映射
    * @internal
    */
   _unresolvedUrlToModuleMap = new Map<
     string,
     Promise<ModuleNode> | ModuleNode
   >()
-  /**
+  /**ssr未解析的url到模块映射
    * @internal
    */
   _ssrUnresolvedUrlToModuleMap = new Map<
@@ -115,7 +119,8 @@ export class ModuleGraph {
     Promise<ModuleNode> | ModuleNode
   >()
 
-  /** @internal */
+  /**已解决失败的错误模块
+   *  @internal */
   _hasResolveFailedErrorModules = new Set<ModuleNode>()
 
   constructor(
@@ -125,11 +130,13 @@ export class ModuleGraph {
     ) => Promise<PartialResolvedId | null>,
   ) {}
 
+  /* @description   核心方法: 通过 URL 获取模块 */
   async getModuleByUrl(
     rawUrl: string,
     ssr?: boolean,
   ): Promise<ModuleNode | undefined> {
-    // Quick path, if we already have a module for this rawUrl (even without extension)
+    // 快速路径，如果我们已经有这个rawUrl的模块 (即使没有扩展)
+
     rawUrl = removeImportQuery(removeTimestampQuery(rawUrl))
     const mod = this._getUnresolvedUrlToModule(rawUrl, ssr)
     if (mod) {
@@ -144,10 +151,12 @@ export class ModuleGraph {
     return this.idToModuleMap.get(removeTimestampQuery(id))
   }
 
+  // 按文件获取模块
   getModulesByFile(file: string): Set<ModuleNode> | undefined {
     return this.fileToModulesMap.get(file)
   }
 
+  /* @description file 文件路交口 */
   onFileChange(file: string): void {
     const mods = this.getModulesByFile(file)
     if (mods) {
