@@ -1,9 +1,9 @@
 import path from 'node:path'
 import { execSync } from 'node:child_process'
 import type * as net from 'node:net'
+import type * as http from 'node:http'
 import { get as httpGet } from 'node:http'
 import { get as httpsGet } from 'node:https'
-import type * as http from 'node:http'
 import { performance } from 'node:perf_hooks'
 import type { Http2SecureServer } from 'node:http2'
 import connect from 'connect'
@@ -14,8 +14,8 @@ import type { FSWatcher, WatchOptions } from 'dep-types/chokidar'
 import type { Connect } from 'dep-types/connect'
 import launchEditorMiddleware from 'launch-editor-middleware'
 import type { SourceMap } from 'rollup'
-import picomatch from 'picomatch'
 import type { Matcher } from 'picomatch'
+import picomatch from 'picomatch'
 import type { CommonServerOptions } from '../http'
 import {
   httpServerStart,
@@ -44,8 +44,8 @@ import { ssrFixStacktrace, ssrRewriteStacktrace } from '../ssr/ssrStacktrace'
 import { ssrTransform } from '../ssr/ssrTransform'
 import { ERR_OUTDATED_OPTIMIZED_DEP } from '../plugins/optimizedDeps'
 import { getDepsOptimizer, initDepsOptimizer } from '../optimizer'
-import { bindCLIShortcuts } from '../shortcuts'
 import type { BindCLIShortcutsOptions } from '../shortcuts'
+import { bindCLIShortcuts } from '../shortcuts'
 import { CLIENT_DIR, DEFAULT_DEV_PORT } from '../constants'
 import type { Logger } from '../logger'
 import { printServerUrls } from '../logger'
@@ -433,30 +433,35 @@ export async function _createServer(
   options: { hotListen: boolean },
 ): Promise<ViteDevServer> {
   // 处理配置文件
+  //
   const config = await resolveConfig(inlineConfig, 'serve')
 
+  // 读取 publck 文件并不立即执行等待结果
   const initPublicFilesPromise = initPublicFiles(config)
-
   // 根路径 ，服务器
   const { root, server: serverConfig } = config
 
-  const httpsOptions = await resolveHttpsConfig(config.server.https)
+  //解析 http 配置支持 http
+  const httpsOptions = await resolveHttpsConfig(config.server.https) // undefined
 
-  const { middlewareMode } = serverConfig
+  // 判断是否为中间件模式
+  const { middlewareMode } = serverConfig // false
 
+  // 构建输出路径dist
   const resolvedOutDirs = getResolvedOutDirs(
     config.root,
     config.build.outDir,
     config.build.rollupOptions?.output,
-  )
+  ) // Set(1) { '/Users/lihaoran/ayu/vite/vite/packages/vite/dist' }
 
+  // 配置是否清空输出目录
   const emptyOutDir = resolveEmptyOutDir(
     config.build.emptyOutDir,
     config.root,
     resolvedOutDirs,
-  )
+  ) // true
 
-  //当文件发生修改、添加或删除时，Vite 会捕捉这些变化并触发相应的处理逻辑（如重新编译模块、刷新浏览器）
+  // chokidar 配置对象 过滤文件，一些其他配置
   const resolvedWatchOptions = resolveChokidarOptions(
     config,
     {
@@ -467,28 +472,46 @@ export async function _createServer(
     emptyOutDir,
   )
 
+  //创建中间件服务器
   const middlewares = connect() as Connect.Server
+
+  // serverConfig 服务器配置
+  // httpsOptions https 配置
+  // 创建 http/https 服务器
+  // http服务器
   const httpServer = middlewareMode
     ? null
     : await resolveHttpServer(serverConfig, middlewares, httpsOptions)
+  // console.log(httpServer, 'httpServer=>(index.ts:485)')
 
+  // console.log(serverConfig, 'serverConfig=>(index.ts:483)')
+
+  // 创建 websocket 对象（包含基础方法)
   const ws = createWebSocketServer(httpServer, config, httpsOptions)
+  // 创建一个HMR消息广播系统, 支持两种通信方式：
+  //WebSocket通道(ws)：负责向浏览器发送HMR更新消息，实现页面热更新
+  // 服务器通道(createServerHMRChannel())：负责通知服务器端插件和中间件的更新
   const hot = createHMRBroadcaster()
     .addChannel(ws)
     .addChannel(createServerHMRChannel())
+
   if (typeof config.server.hmr === 'object' && config.server.hmr.channels) {
     config.server.hmr.channels.forEach((channel) => hot.addChannel(channel))
   }
 
-  const publicFiles = await initPublicFilesPromise
+  // 获取public 文件
+  const publicFiles = await initPublicFilesPromise //Set(1) { '/1.js' }
   const { publicDir } = config
 
   if (httpServer) {
+    // 处理客户端错误的核心函数
     setClientErrorHandler(httpServer, config.logger)
   }
 
+  /// serverConfig.watch undefined
   // eslint-disable-next-line eqeqeq
-  const watchEnabled = serverConfig.watch !== null
+  const watchEnabled = serverConfig.watch !== null // true
+  // 设置监视文件的函数配置
   const watcher = watchEnabled
     ? (chokidar.watch(
         // config file dependencies and env file might be outside of root
@@ -504,13 +527,17 @@ export async function _createServer(
       ) as FSWatcher)
     : createNoopWatcher(resolvedWatchOptions)
 
+  // Vite 进行模块依赖分析和热更新的基础设施
   const moduleGraph: ModuleGraph = new ModuleGraph((url, ssr) =>
     container.resolveId(url, undefined, { ssr }),
   )
 
+  // 创建插件容器，管理所有 Vite 插件,负责协调插件的执行顺序和生命周期
   const container = await createPluginContainer(config, moduleGraph, watcher)
+  // 关闭 http 服务器的函数
   const closeHttpServer = createServerCloseFn(httpServer)
 
+  //创建开发环境下的 HTML 转换函数
   const devHtmlTransformFn = createDevHtmlTransformFn(config)
 
   const onCrawlEndCallbacks: (() => void)[] = []
@@ -528,15 +555,16 @@ export async function _createServer(
   }
 
   let server: ViteDevServer = {
-    config,
-    middlewares,
-    httpServer,
-    watcher,
-    pluginContainer: container,
-    ws,
-    hot,
-    moduleGraph,
+    config, // vite 配置对象
+    middlewares, // 中间件集合
+    httpServer, // http 服务器实例
+    watcher, // 文件监听器
+    pluginContainer: container, // 插件容器
+    ws, // websocket服务器
+    hot, // HMR 管理器
+    moduleGraph, //模块依赖图
     resolvedUrls: null, // will be set on listen
+    // ssr 代码转换
     ssrTransform(
       code: string,
       inMap: SourceMap | { mappings: '' } | null,
@@ -545,9 +573,11 @@ export async function _createServer(
     ) {
       return ssrTransform(code, inMap, url, originalCode, server.config)
     },
+    // 请求转换
     transformRequest(url, options) {
       return transformRequest(url, server, options)
     },
+    // 预热请求 - 优化首次加载性能
     async warmupRequest(url, options) {
       try {
         await transformRequest(url, server, options)
@@ -565,7 +595,7 @@ export async function _createServer(
           timestamp: true,
         })
       }
-    },
+    }, // html 转换
     transformIndexHtml(url, html, originalUrl) {
       return devHtmlTransformFn(server, url, html, originalUrl)
     },
@@ -581,19 +611,23 @@ export async function _createServer(
     ssrRewriteStacktrace(stack: string) {
       return ssrRewriteStacktrace(stack, moduleGraph)
     },
+    // TODO 模块更新逻辑 !!!!
     async reloadModule(module) {
       if (serverConfig.hmr !== false && module.file) {
         updateModules(module.file, [module], Date.now(), server)
       }
     },
+    // 启动服务器
     async listen(port?: number, isRestart?: boolean) {
-      await startServer(server, port)
+      // 开启服务器
+      await startServer(server, port) //给服务器设置端口
+
       if (httpServer) {
         server.resolvedUrls = await resolveServerUrls(
           httpServer,
           config.server,
           config,
-        )
+        ) // { local: [ 'http://localhost:5173/' ], network: [] }
         if (!isRestart && config.server.open) server.openBrowser()
       }
       return server
@@ -643,6 +677,7 @@ export async function _createServer(
         server.config.logger.warn('No URL available to open in browser')
       }
     },
+    // 关闭服务器
     async close() {
       if (!middlewareMode) {
         teardownSIGTERMListener(closeServerAndExit)
@@ -671,6 +706,7 @@ export async function _createServer(
       }
       server.resolvedUrls = null
     },
+    // 打印服务器 url
     printUrls() {
       if (server.resolvedUrls) {
         printServerUrls(
@@ -793,6 +829,7 @@ export async function _createServer(
 
   watcher.on('change', async (file) => {
     file = normalizePath(file)
+    console.log(file, 33)
     await container.watchChange(file, { event: 'update' })
     // invalidate module graph cache on file change
     moduleGraph.onFileChange(file)
@@ -979,30 +1016,34 @@ async function startServer(
   server: ViteDevServer,
   inlinePort?: number,
 ): Promise<void> {
-  const httpServer = server.httpServer
+  const httpServer = server.httpServer //http服务器
+
   if (!httpServer) {
     throw new Error('Cannot call server.listen in middleware mode.')
   }
 
-  const options = server.config.server
-  const hostname = await resolveHostname(options.host)
-  const configPort = inlinePort ?? options.port
+  const options = server.config.server // config.server配置
+  const hostname = await resolveHostname(options.host) // { host: 'localhost', name: 'localhost' }
+  const configPort = inlinePort ?? options.port // undefined
   // When using non strict port for the dev server, the running port can be different from the config one.
   // When restarting, the original port may be available but to avoid a switch of URL for the running
   // browser tabs, we enforce the previously used port, expect if the config port changed.
   const port =
     (!configPort || configPort === server._configServerPort
       ? server._currentServerPort
-      : configPort) ?? DEFAULT_DEV_PORT
+      : configPort) ?? DEFAULT_DEV_PORT // 5173
+
   server._configServerPort = configPort
 
-  const serverPort = await httpServerStart(httpServer, {
+  const obj = {
     port,
     strictPort: options.strictPort,
     host: hostname.host,
     logger: server.config.logger,
-  })
-  server._currentServerPort = serverPort
+  }
+
+  // 当前端口号
+  server._currentServerPort = await httpServerStart(httpServer, obj)
 }
 
 export function createServerCloseFn(

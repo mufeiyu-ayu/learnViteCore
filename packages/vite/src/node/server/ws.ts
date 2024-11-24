@@ -89,11 +89,18 @@ function noop() {
   // noop
 }
 
+/**
+ *
+ * @param server http 服务器
+ * @param config 配置文件
+ * @param httpsOptions config.server.http配置
+ */
 export function createWebSocketServer(
   server: HttpServer | null,
   config: ResolvedConfig,
   httpsOptions?: HttpsServerOptions,
 ): WebSocketServer {
+  // console.log(config.server.ws, 33)
   if (config.server.ws === false) {
     return {
       name: 'ws',
@@ -112,30 +119,40 @@ export function createWebSocketServer(
 
   let wss: WebSocketServerRaw_
   let wsHttpServer: Server | undefined = undefined
-
-  const hmr = isObject(config.server.hmr) && config.server.hmr
-  const hmrServer = hmr && hmr.server
-  const hmrPort = hmr && hmr.port
+  const hmr = isObject(config.server.hmr) && config.server.hmr //false
+  const hmrServer = hmr && hmr.server // false
+  const hmrPort = hmr && hmr.port // false
   // TODO: the main server port may not have been chosen yet as it may use the next available
   const portsAreCompatible = !hmrPort || hmrPort === config.server.port
-  const wsServer = hmrServer || (portsAreCompatible && server)
+  // 如果有专门的hmr服务器就用它
+  // 否则,如果端口兼容且有普通服务器,就用普通服务器
+  const wsServer = hmrServer || (portsAreCompatible && server) //httpserver
   let hmrServerWsListener: (
     req: InstanceType<typeof IncomingMessage>,
     socket: Duplex,
     head: Buffer,
   ) => void
+
+  //存储自定义事件监听器的Map，key 是事件名,value 是监听器函数
   const customListeners = new Map<string, Set<WebSocketCustomListener<any>>>()
+
+  //存储客户端的Map，key 是客户端实例，value 是客户端
   const clientsMap = new WeakMap<WebSocketRaw, WebSocketClient>()
+  // 设置 websocket 端口
   const port = hmrPort || 24678
+  // 设置 websocket host主机
   const host = (hmr && hmr.host) || undefined
 
   if (wsServer) {
-    let hmrBase = config.base
-    const hmrPath = hmr ? hmr.path : undefined
+    let hmrBase = config.base // /
+    const hmrPath = hmr ? hmr.path : undefined // undefined
     if (hmrPath) {
       hmrBase = path.posix.join(hmrBase, hmrPath)
     }
+    // 创建 websocket 服务器设置为 noserver 模式
     wss = new WebSocketServerRaw({ noServer: true })
+
+    // 设置升级请求监听器,当收到正确的协议和URL时将HTTP连接升级为WebSocket连接
     hmrServerWsListener = (req, socket, head) => {
       if (
         req.headers['sec-websocket-protocol'] === HMR_HEADER &&
@@ -173,12 +190,16 @@ export function createWebSocketServer(
   }
 
   wss.on('connection', (socket) => {
+    // 处理客户端发来的消息
     socket.on('message', (raw) => {
+      console.log('raw', raw, '=>ws.ts:195')
       if (!customListeners.size) return
       let parsed: any
       try {
         parsed = JSON.parse(String(raw))
+        console.log(parsed, 'parsed=>(ws.ts:200)')
       } catch {}
+      // 验证是否为自定义事件消息
       if (!parsed || parsed.type !== 'custom' || !parsed.event) return
       const listeners = customListeners.get(parsed.event)
       if (!listeners?.size) return
@@ -214,6 +235,7 @@ export function createWebSocketServer(
 
   // Provide a wrapper to the ws client so we can send messages in JSON format
   // To be consistent with server.ws.send
+  // 获取 socket 包装器
   function getSocketClient(socket: WebSocketRaw) {
     if (!clientsMap.has(socket)) {
       clientsMap.set(socket, {
@@ -244,12 +266,16 @@ export function createWebSocketServer(
 
   return {
     name: 'ws',
+    //启动服务器
     listen: () => {
       wsHttpServer?.listen(port, host)
     },
+    // 监听事件
     on: ((event: string, fn: () => void) => {
+      // 系统事件使用原生方法
       if (wsServerEvents.includes(event)) wss.on(event, fn)
       else {
+        // 自定义事件存储到 map 中
         if (!customListeners.has(event)) {
           customListeners.set(event, new Set())
         }

@@ -92,6 +92,7 @@ export async function resolveHttpServer(
   app: Connect.Server,
   httpsOptions?: HttpsServerOptions,
 ): Promise<HttpServer> {
+  // console.log(proxy, 'proxy') undefined
   if (!httpsOptions) {
     const { createServer } = await import('node:http')
     return createServer(app)
@@ -167,6 +168,7 @@ export async function httpServerStart(
 
     httpServer.on('error', onError)
 
+    //开启服务器
     httpServer.listen(port, host, () => {
       httpServer.removeListener('error', onError)
       resolve(port)

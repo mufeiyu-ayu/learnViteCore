@@ -10,6 +10,7 @@ import {
 
 const publicFilesMap = new WeakMap<ResolvedConfig, Set<string>>()
 
+/* @description 读取 public所有文件 */
 export async function initPublicFiles(
   config: ResolvedConfig,
 ): Promise<Set<string> | undefined> {

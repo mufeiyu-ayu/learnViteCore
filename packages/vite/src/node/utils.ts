@@ -958,12 +958,17 @@ export async function resolveHostname(
   return { host, name }
 }
 
+/**
+ * server http服务器
+ * options 配置文件 server 模块
+ * config 配置文件
+ * */
 export async function resolveServerUrls(
   server: Server,
   options: CommonServerOptions,
   config: ResolvedConfig,
 ): Promise<ResolvedServerUrls> {
-  const address = server.address()
+  const address = server.address() // { address: '::1', family: 'IPv6', port: 5173 }
 
   const isAddressInfo = (x: any): x is AddressInfo => x?.address
   if (!isAddressInfo(address)) {

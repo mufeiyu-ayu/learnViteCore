@@ -154,6 +154,7 @@ cli
     // is ok here
 
     const { createServer } = await import('./server')
+
     try {
       const server = await createServer({
         root,

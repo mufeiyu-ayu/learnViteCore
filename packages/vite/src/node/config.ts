@@ -452,6 +452,7 @@ export async function resolveConfig(
   defaultNodeEnv = 'development',
   isPreview = false,
 ): Promise<ResolvedConfig> {
+  //命令行参数配置
   let config = inlineConfig
   let configFileDependencies: string[] = []
   let mode = inlineConfig.mode || defaultMode
@@ -469,11 +470,10 @@ export async function resolveConfig(
     command,
     isSsrBuild: command === 'build' && !!config.build?.ssr,
     isPreview,
-  }
-
+  } // {mode: 'development', command: 'serve', isSsrBuild: false, isPreview: false}
   let { configFile } = config
   if (configFile !== false) {
-    // 如果 configfile没值
+    // 如果指定了配置文件或者未指定且找到了包含 vite.config.ts/js..的文件则加载配置否则忽略
     const loadResult = await loadConfigFromFile(
       configEnv,
       configFile,
@@ -526,7 +526,7 @@ export async function resolveConfig(
   const resolvedRoot = normalizePath(
     config.root ? path.resolve(config.root) : process.cwd(),
   )
-
+  // 监听根目录
   checkBadCharactersInPath(resolvedRoot, logger)
 
   const clientAlias = [
@@ -545,6 +545,7 @@ export async function resolveConfig(
     mergeAlias(clientAlias, config.resolve?.alias || []),
   )
 
+  // 处理 resolve配置
   const resolveOptions: ResolvedConfig['resolve'] = {
     mainFields: config.resolve?.mainFields ?? DEFAULT_MAIN_FIELDS,
     conditions: config.resolve?.conditions ?? [],

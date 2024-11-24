@@ -716,12 +716,14 @@ async function readModifiedFile(file: string): Promise<string> {
 }
 
 export function createHMRBroadcaster(): HMRBroadcaster {
-  const channels: HMRChannel[] = []
-  const readyChannels = new WeakSet<HMRChannel>()
+  const channels: HMRChannel[] = [] // 定义通道集合
+  const readyChannels = new WeakSet<HMRChannel>() //记录通道是否就绪
   const broadcaster: HMRBroadcaster = {
+    /* @description 提供通道的只读访问，返回一个浅拷贝防止外部修改原集 */
     get channels() {
       return [...channels]
     },
+    /* @description 添加一个新通道到集合，并确保 channel.name 唯一。  */
     addChannel(channel) {
       if (channels.some((c) => c.name === channel.name)) {
         throw new Error(`HMR channel "${channel.name}" is already defined.`)
@@ -729,6 +731,7 @@ export function createHMRBroadcaster(): HMRBroadcaster {
       channels.push(channel)
       return broadcaster
     },
+    /* @description 在所有通道上注册事件监听器。对 connection 事件提供特殊处理，检测所有通道是否就绪。 */
     on(event: string, listener: (...args: any[]) => any) {
       // emit connection event only when all channels are ready
       if (event === 'connection') {
@@ -737,6 +740,7 @@ export function createHMRBroadcaster(): HMRBroadcaster {
         channels.forEach((channel) =>
           channel.on('connection', () => {
             readyChannels.add(channel)
+            // 如果所有通道都触发了 connection 事件，则认为它们“就绪”，然后调用监听器。
             if (channels.every((c) => readyChannels.has(c))) {
               listener()
             }
@@ -747,16 +751,20 @@ export function createHMRBroadcaster(): HMRBroadcaster {
       channels.forEach((channel) => channel.on(event, listener))
       return
     },
+    /* @description 移除事件监听器。。 */
     off(event, listener) {
       channels.forEach((channel) => channel.off(event, listener))
       return
     },
+    /* @description 广播消息给所有通道。 */
     send(...args: any[]) {
       channels.forEach((channel) => channel.send(...(args as [any])))
     },
+    /* @description listen()： */
     listen() {
       channels.forEach((channel) => channel.listen())
     },
+    /* @description 关闭所有通道，返回一个 Promise，等待关闭完成。 */
     close() {
       return Promise.all(channels.map((channel) => channel.close()))
     },
